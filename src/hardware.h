@@ -1,0 +1,6 @@
+#ifndef ARDUBOY2HARDWARE_H
+#define ARDUBOY2HARDWARE_H
+
+
+
+#endif

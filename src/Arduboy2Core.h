@@ -13,6 +13,45 @@
 #include <avr/sleep.h>
 #include <limits.h>
 
+#define WIDTH 128 /**< The width of the display in pixels */
+#define HEIGHT 64 /**< The height of the display in pixels */
+
+// EEPROM settings
+#define EEPROM_VERSION 0
+#define EEPROM_BRIGHTNESS 1
+#define EEPROM_AUDIO_ON_OFF 2
+
+/** \brief
+ * Start of EEPROM storage space for sketches.
+ *
+ * \details
+ * An area at the start of EEPROM is reserved for system use.
+ * This define specifies the first EEPROM location past the system area.
+ * Sketches can use locations from here to the end of EEPROM space.
+ */
+#define EEPROM_STORAGE_SPACE_START 16
+
+
+// pixel colors
+#define BLACK 0  /**< Color value for an unlit pixel for draw functions. */
+#define WHITE 1  /**< Color value for a lit pixel for draw functions. */
+/** \brief
+ * Color value to indicate pixels are to be inverted.
+ *
+ * \details
+ * BLACK pixels will become WHITE and WHITE will become BLACK.
+ *
+ * \note
+ * Only function Arduboy2Base::drawBitmap() currently supports this value.
+ */
+#define INVERT 2
+
+// compare Vcc to 1.1 bandgap
+#define ADC_VOLTAGE (_BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1))
+// compare temperature to 2.5 internal reference and _BV(MUX5)
+#define ADC_TEMP (_BV(REFS0) | _BV(REFS1) | _BV(MUX2) | _BV(MUX1) | _BV(MUX0))
+
+
 
 // main hardware compile flags
 
