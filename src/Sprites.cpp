@@ -6,6 +6,62 @@
 
 #include "Sprites.h"
 
+RotationVector::RotationVector(int d) :
+degreez(d) {
+
+  this->degreez = normalize(d);
+  this->cosFractional = this->cos(d);
+  this->sinFractional = this->sin(d);
+}
+
+// (0..89).to_a.map { |x| (Math.sin(x.degrees)*128).round }
+int8_t const PROGMEM sinTable[] = {0, 2, 4, 7, 9, 11, 13, 15, 18, 20, 22,
+24, 26, 29, 31, 33, 35, 37, 39, 41, 43, 46, 48, 50, 52, 54, 56, 58, 60, 62,
+63, 65, 67, 69, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 91, 93, 94,
+96, 97, 99, 100, 101, 103, 104, 105, 107, 108, 109, 110, 111, 112, 113,
+114, 115, 116, 117, 118, 119, 119, 120, 121, 121, 122, 123, 123, 124, 124,
+125, 125, 125, 126, 126, 126, 127, 127, 127, 127, 127, 127 };
+
+int16_t RotationVector::normalize(int16_t degrees) {
+  if (degrees < 0) {
+    return (degrees%360)+360;
+  } else {
+    return degrees;
+  }
+}
+
+
+int8_t RotationVector::cos(int16_t degrees) {
+  // rotate 90 degrees and then we can just ask sin
+  return sin((degrees+90)%360);
+}
+
+int8_t RotationVector::sin(int16_t degrees) {
+  int8_t modifier = 1;
+
+  if (degrees >= 180) {
+    modifier =- 1;
+    degrees %= 180;
+  }
+  if (degrees >= 90) {
+    // rotate 90-179 backwards onto 89-0, ie 100 becomes 80, tec.
+    degrees = 90 - (degrees - 90);
+  // } else if (degrees >= 85) {
+    // return 0;
+  }
+  return pgm_read_byte(sinTable + degrees) * modifier;
+}
+
+Coord RotationVector::transform(int x, int y)
+{
+  Coord result;
+
+  result.x = (x * this->cosFractional + y * this->sinFractional) >> 7;
+  result.y = (y * this->cosFractional + x * -this->sinFractional) >> 7;
+
+  return result;
+}
+
 void Sprites::drawExternalMask(int16_t x, int16_t y, const uint8_t *bitmap,
                                const uint8_t *mask, uint8_t frame, uint8_t mask_frame)
 {
@@ -32,6 +88,60 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
   draw(x, y, bitmap, frame, NULL, 0, SPRITE_PLUS_MASK);
 }
 
+extern Arduboy2 arduboy;
+
+void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+  uint16_t degrees)
+{
+  int16_t xOffset;
+  int8_t yOffset;
+  RotationVector v(degrees);
+  Coord xy;
+  int8_t xCenter, yCenter;
+  int16_t plotX, plotY;
+
+  if (bitmap == NULL)
+    return;
+
+  uint8_t width = pgm_read_byte(bitmap++);
+  uint8_t height = pgm_read_byte(bitmap++);
+
+  // setup rotational transforms
+
+
+  // setup offsets
+  xCenter = width / 2;
+  yCenter = height / 2;
+
+  xy = v.transform(xCenter, yCenter);
+  xOffset = xCenter - xy.x;
+  yOffset = yCenter - xy.y;
+  // xOffset = x;
+  // yOffset = y;
+
+  uint8_t pixels, color, shift;
+  for (uint8_t x=0; x< width; x++) {
+    // every 8 pixels we need to load more pixel data from the bitmap
+    for (uint8_t y=0; y < height; y++ ) {
+      shift = (y%8);
+      if (shift==0) {
+        pixels = pgm_read_byte(bitmap + (y*width / 8) + x);
+      }
+      // TODO run this only once, not each iteration
+      xy = v.transform(x, y);
+      plotX = xy.x + xOffset;
+      plotY = xy.y + yOffset;
+
+      color = pixels & _BV(shift);
+      Arduboy2Base::drawPixel(plotX, plotY, color);
+      // Arduboy2Base::drawPixel(x, y, color);
+    }
+  }
+
+  arduboy.setCursor(0,32);
+  arduboy.println(xOffset);
+  arduboy.println(yOffset);
+}
 
 //common functions
 void Sprites::draw(int16_t x, int16_t y,

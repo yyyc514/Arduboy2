@@ -111,7 +111,7 @@ void Arduboy2Base::bootLogo()
     }
   }
 
-  delay(750);
+  delay(1250);
   digitalWrite(BLUE_LED, RGB_OFF);
 }
 

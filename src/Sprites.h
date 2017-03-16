@@ -17,6 +17,35 @@
 #define SPRITE_IS_MASK_ERASE 251
 #define SPRITE_AUTO_MODE 255
 
+struct Coord
+{
+    int16_t x;
+    int8_t y;
+};
+
+// lookup table of sin 0-89 here
+
+
+class RotationVector
+{
+public:
+    RotationVector() {};
+    RotationVector(int d);
+
+    int16_t degreez; // evidentially degrees is a macro
+
+    Coord transform(int x, int y);
+
+    int8_t cos(int16_t degrees);
+    int8_t sin(int16_t degrees);
+
+private:
+
+    int16_t normalize(int16_t degrees);
+    int8_t cosFractional;
+    int8_t sinFractional;
+};
+
 /** \brief
  * A class for drawing animated sprites from image and mask bitmaps.
  *
@@ -212,6 +241,12 @@ class Sprites
      *     .....  OOOOO   OOOOO
      */
     void drawSelfMasked(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame);
+
+    // Draw the given sprite rotated by a given number of degrees
+    //
+    //
+    void drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+      uint16_t degrees);
 
     // Master function. Needs to be abstracted into separate function for
     // every render type.
