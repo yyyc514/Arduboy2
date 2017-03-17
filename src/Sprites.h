@@ -23,28 +23,89 @@ struct Coord
     int8_t y;
 };
 
-// lookup table of sin 0-89 here
-
-
+/** \brief
+ * A class to help support rotational transforms (by degrees).
+*/
 class RotationVector
 {
 public:
-    RotationVector() {};
     RotationVector(int d);
 
-    int16_t degreez; // evidentially degrees is a macro
-
+    /** \brief
+     * Perform a raw rotational tranform of the given coordinates.
+     *
+     * \param x Origin X coordinate.
+     * \param y Origin Y coordinate.
+     * \return a Coord struct with the transformed X and Y coordinates.
+     *
+     * \details
+     * This assumes 0,0 is the center of the rotation.  If your sprite
+     * is 64x64 then when rotated 180 degrees the new "top left" visible
+     * corner would be at -63, -63.  If you want to rotate around the
+     * center of your image you'll need to calcuate the offsets yourself.
+    */
     Coord transform(int x, int y);
 
-    int8_t cos(int16_t degrees);
-    int8_t sin(int16_t degrees);
+    /** \brief
+     * Calculates a 8-bit signed cosine fractional value.
+     *
+     * \param degrees The degrees you wish to calculate the cosine of.
+     *
+     * \details
+     * The value returned is in the range of -127 to 127, corresponding
+     * with actual floating point values of -1.0 to 1.0.
+     *
+     * This is intended to be used with 16 bit signed ints serving to
+     * hold fixed floating point values - the high byte storing the integer
+     * portion and the low byte storing the fractional. Or 9 high bits,
+     * and 7 low bits (as in the example below).
+     *
+     * Example:
+     * Assume our cosine is 0.5 (64).
+     *
+     * // shift left 7 bits to allow room for our fractional
+     * x = x << 7;
+     * // add the fractional
+     * x += 64;
+     * // shift the fractional bytes back off to get the integer portion
+     * x = x >> 7;
+     *
+     * Note in this example the value of X wouldn't actually change. To
+     * see a fractional difference you'd have to be iterating inside a loop
+     * and then converting X back to an integer over time to observe the
+     * change adding up.
+    */
+    static int8_t cos(int16_t degrees);
+
+    /** \brief
+     * Calculates a 8-bit signed sine fractional value.
+     *
+     * \param degrees The degrees you wish to calculate the sine of.
+     *
+     * \details
+     * The value returned is in the range of -127 to 127, corresponding
+     * with actual floating point values of -1.0 to 1.0.
+     *
+     * See cos docs for further details.
+    */
+    static int8_t sin(int16_t degrees);
+
+    /** \brief
+     * Converts negative degree amonts to the equivalent positive rotation.
+     * ie, -30 becomes 330.
+     *
+     * \param degrees The amount you are wanting to normalize.
+     *
+    */
+    static int16_t normalize(int16_t degrees);
 
     int8_t cosFractional;
     int8_t sinFractional;
+    int16_t degreez; // evidentially degrees is a macro
+
 
 private:
 
-    int16_t normalize(int16_t degrees);
 };
 
 /** \brief
@@ -243,11 +304,37 @@ class Sprites
      */
     void drawSelfMasked(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame);
 
-    // Draw the given sprite rotated by a given number of degrees
-    //
-    //
+
+    /** \brief
+     * Draw the given sprite rotated by a given number of degrees and
+     * scaled as desired.
+     *
+     * \param x,y The coordinates of the top left pixel location.
+     * \param bitmap A pointer to the array containing the image frames.
+     * \param frame The frame number of the image to draw.
+     * \param degrees The number of degrees to rotate the image.
+     * \param scale The scale at which to draw the image (100 is 100%).
+     *
+     * \details
+     * Auto-centering is performed so that x, y is always [roughly] the top
+     * left of the rendering so that to rotate an image in place you call
+     * this function with the same (x, y) and vary only the degrees.
+     *
+     * The draw mode used is currently only SPRITE_UNMASKED.
+     *
+     * Notes:
+     * 1. For smaller sprites the difference between individual degrees may
+     *    not be visibly noticeable.
+     * 2. Scaling is intended for reducing not enlarging. If you provide a
+     *    scale > 100 then your image will start to have a lot of dead
+     *    space - ie, pixels are only transformed, not enlarged.
+     *
+     * Performance: This can rotate a full-screen image at around 20fps and
+     * can rotate a 32x32 image at 90-100fps.
+    */
     void drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-      uint16_t degrees);
+      uint16_t degrees, uint8_t scale);
+
 
     // Master function. Needs to be abstracted into separate function for
     // every render type.

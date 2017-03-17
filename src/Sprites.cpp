@@ -6,6 +6,8 @@
 
 #include "Sprites.h"
 
+/* ROTATION */
+
 RotationVector::RotationVector(int d) :
 degreez(d) {
 
@@ -30,17 +32,16 @@ int16_t RotationVector::normalize(int16_t degrees) {
   }
 }
 
-
 int8_t RotationVector::cos(int16_t degrees) {
   // rotate 90 degrees and then we can just ask sin
   return sin((degrees+90)%360);
 }
 
 int8_t RotationVector::sin(int16_t degrees) {
-  int8_t modifier = 1;
+  int8_t sign = 1;
 
   if (degrees >= 180) {
-    modifier =- 1;
+    sign =- 1;
     degrees %= 180;
   }
   if (degrees >= 90) {
@@ -49,7 +50,7 @@ int8_t RotationVector::sin(int16_t degrees) {
   // } else if (degrees >= 85) {
     // return 0;
   }
-  return pgm_read_byte(sinTable + degrees) * modifier;
+  return pgm_read_byte(sinTable + degrees) * sign;
 }
 
 Coord RotationVector::transform(int x, int y)
@@ -61,6 +62,8 @@ Coord RotationVector::transform(int x, int y)
 
   return result;
 }
+
+/* SPRITES */
 
 void Sprites::drawExternalMask(int16_t x, int16_t y, const uint8_t *bitmap,
                                const uint8_t *mask, uint8_t frame, uint8_t mask_frame)
@@ -89,13 +92,13 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
 }
 
 void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-  uint16_t degrees)
+  uint16_t degrees, uint8_t scale = 100)
 {
   int16_t xOffset;
   int8_t yOffset;
   RotationVector v(degrees);
   Coord xy;
-  int8_t xCenter, yCenter;
+  uint8_t xCenter, yCenter;
   int16_t plotX, plotY;
   int16_t cursorX, cursorY;
 
@@ -110,23 +113,23 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   negativeCos = v.cosFractional < 0;
   negativeSin = v.sinFractional < 0;
   uint8_t ucf, usf;
-  ucf = abs(v.cosFractional)*2;
-  usf = abs(v.sinFractional)*2;
+  ucf = abs(v.cosFractional)*2 * (scale/100);
+  usf = abs(v.sinFractional)*2 * (scale/100);
 
-  // setup offsets
+  // setup offsets so we remain "centered" instead of rotating around
+  // our initial 0,0
   xCenter = width / 2;
   yCenter = height / 2;
 
   xy = v.transform(xCenter, yCenter);
-  xOffset = xCenter - xy.x;
-  yOffset = yCenter - xy.y;
+  xOffset = xCenter - xy.x * (scale/100);
+  yOffset = yCenter - xy.y * (scale/100);
 
-  // bump the number for our fixed 7-bit floating point math
+  // convert for fixed 8-bit floating point math
   cursorX = xOffset * 256;
   cursorY = yOffset * 256;
 
-  uint8_t pixels, color;
-  uint8_t ix, iy;
+  uint8_t pixels, color, ix, iy;
   uint16_t xofs;
   for (uint8_t x=0; x< width; x++) {
     xofs = bitmap + x;
@@ -141,22 +144,24 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
       color = pixels & 0x01;
       pixels >>= 1;
 
+      // return the high byte for the integer portion
       ix = *((unsigned char *) (&plotX) + 1);
       iy = *((unsigned char *) (&plotY) + 1);
+
       // Arduboy2Base::drawPixel(ix, iy, color);
-      // BEGIN inline drawpixel
-      uint16_t pofs;
+      // BEGIN - inline drawpixel
+      uint16_t bufferOffset;
       // if (!(ix < 0 || ix > (WIDTH-1) || iy < 0 || iy > (HEIGHT-1))) {
       if (!(ix > (WIDTH-1) || iy > (HEIGHT-1))) {
         uint8_t row = iy / 8;
-        pofs = ((uint16_t)row*WIDTH) + ix;
+        bufferOffset = ((uint16_t)row*WIDTH) + ix;
         if (color) {
-          Arduboy2Base::sBuffer[pofs] |=   _BV(iy % 8);
+          Arduboy2Base::sBuffer[bufferOffset] |=   _BV(iy % 8);
         } else {
-          Arduboy2Base::sBuffer[pofs] &= ~ _BV(iy % 8);
+          Arduboy2Base::sBuffer[bufferOffset] &= ~ _BV(iy % 8);
         }
       }
-      // END inline drawpixel
+      // END - inline drawpixel
       plotX += (negativeSin ? -usf : +usf);
       plotY += (negativeCos ? -ucf : +ucf);
     }

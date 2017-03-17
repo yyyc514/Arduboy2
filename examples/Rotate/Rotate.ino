@@ -45,7 +45,7 @@ int degrees = 0;
 void loop() {
   arduboy.clear();
 
-  degrees+=2;
+  degrees+=3;
   if (degrees>=360) {
     degrees = 0;
   }
