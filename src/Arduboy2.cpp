@@ -203,19 +203,14 @@ void Arduboy2Base::clear()
 void Arduboy2Base::drawPixel(int16_t x, int16_t y, uint8_t color)
 {
   #ifdef PIXEL_SAFE_MODE
-  if (x < 0 || x > (WIDTH-1) || y < 0 || y > (HEIGHT-1))
-  {
-    return;
-  }
+  if (x < 0 || x > (WIDTH-1) || y < 0 || y > (HEIGHT-1)) {
+    return; }
   #endif
 
   uint8_t row = (uint8_t)y / 8;
-  if (color)
-  {
+  if (color) {
     sBuffer[(row*WIDTH) + (uint8_t)x] |=   _BV((uint8_t)y % 8);
-  }
-  else
-  {
+  } else {
     sBuffer[(row*WIDTH) + (uint8_t)x] &= ~ _BV((uint8_t)y % 8);
   }
 }

@@ -88,12 +88,6 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
   draw(x, y, bitmap, frame, NULL, 0, SPRITE_PLUS_MASK);
 }
 
-extern Arduboy2 arduboy;
-
-// convert fixed-float back to integer portion
-// #define ffint(x) ((x << 1) / 256)
-#define ffint(x) (*(unsigned char *)((&x)+1))
-
 void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
   uint16_t degrees)
 {
@@ -105,8 +99,6 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   int16_t plotX, plotY;
   int16_t cursorX, cursorY;
 
-
-
   if (bitmap == NULL)
     return;
 
@@ -114,33 +106,12 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   uint8_t height = pgm_read_byte(bitmap++);
 
   // setup rotational transforms
-  int8_t ix, iy, sx, sy, skipXevery, skipYevery;
   boolean negativeCos, negativeSin;
   negativeCos = v.cosFractional < 0;
   negativeSin = v.sinFractional < 0;
-  uint8_t tcf, tsf;
-  tcf = abs(v.cosFractional)*2;
-  tsf = abs(v.sinFractional)*2;
-  // if (tcf >= 64) {
-  //   // 128 = 128
-  //   // 96 = 4
-  //   // 64 = 2
-  //   if (tcf==127)
-  //     tcf=126;
-
-  //   ix = negative ? -1 : 1;
-  //   sx = 0;
-  //   skipXevery = 127 / (127 - tcf);
-  // } else {
-  //   // 1 = 128
-  //   // 8  = 16
-  //   // 16 = 8
-  //   // 32 = 4
-  //   // 64 = 2
-  //   skipXevery = 127 / tcf;
-  //   ix = 0;
-  //   sx = negative ? -1 : 1;
-  // }
+  uint8_t ucf, usf;
+  ucf = abs(v.cosFractional)*2;
+  usf = abs(v.sinFractional)*2;
 
   // setup offsets
   xCenter = width / 2;
@@ -154,35 +125,45 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   cursorX = xOffset * 256;
   cursorY = yOffset * 256;
 
-  uint8_t pixels, color, shift;
+  uint8_t pixels, color;
+  uint8_t ix, iy;
+  uint16_t xofs;
   for (uint8_t x=0; x< width; x++) {
+    xofs = bitmap + x;
     plotX = cursorX;
     plotY = cursorY;
     // every 8 pixels we need to load more pixel data from the bitmap
     for (uint8_t y=0; y < height; y++ ) {
-      shift = (y%8);
-      if (shift==0) {
-        pixels = pgm_read_byte(bitmap + (y*width / 8) + x);
+      if (y%8==0) {
+        pixels = pgm_read_byte(xofs);
+        xofs += width;
       }
-      color = pixels & _BV(shift);
-      // color = pixels;
-      // ix = plotX << 1;
-      // iy = plotY << 1;
-      Arduboy2Base::drawPixel(*((unsigned char *) (&plotX) +1), *((unsigned char *) (&plotY)+1), color);
-      // Arduboy2Base::drawPixel(ffint(plotX), ffint(plotY), color);
-      plotX += (negativeSin ? -tsf : +tsf);
-      plotY += (negativeCos ? -tcf : +tcf);
+      color = pixels & 0x01;
+      pixels >>= 1;
+
+      ix = *((unsigned char *) (&plotX) + 1);
+      iy = *((unsigned char *) (&plotY) + 1);
+      // Arduboy2Base::drawPixel(ix, iy, color);
+      // BEGIN inline drawpixel
+      uint16_t pofs;
+      // if (!(ix < 0 || ix > (WIDTH-1) || iy < 0 || iy > (HEIGHT-1))) {
+      if (!(ix > (WIDTH-1) || iy > (HEIGHT-1))) {
+        uint8_t row = iy / 8;
+        pofs = ((uint16_t)row*WIDTH) + ix;
+        if (color) {
+          Arduboy2Base::sBuffer[pofs] |=   _BV(iy % 8);
+        } else {
+          Arduboy2Base::sBuffer[pofs] &= ~ _BV(iy % 8);
+        }
+      }
+      // END inline drawpixel
+      plotX += (negativeSin ? -usf : +usf);
+      plotY += (negativeCos ? -ucf : +ucf);
     }
     // update cursor X and Y
-    cursorX += (negativeCos ? -tcf : +tcf);
-    // cursorX += (x%skipXevery==0) ? sx*127 : ix*127;
-    // sign purposely reversed
-    cursorY += (negativeSin ? +tsf : -tsf);
+    cursorX += (negativeCos ? -ucf : +ucf);
+    cursorY += (negativeSin ? +usf : -usf); // sign purposely reversed
   }
-
-  //arduboy.setCursor(0,32);
-  //arduboy.println(xOffset);
-  //arduboy.println(yOffset);
 }
 
 //common functions

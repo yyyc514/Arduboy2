@@ -45,10 +45,11 @@ int degrees = 0;
 void loop() {
   arduboy.clear();
 
-  degrees++;
+  degrees+=2;
   if (degrees>=360) {
     degrees = 0;
   }
+  // arduboy.drawPixel(1,1,1);
   RotationVector v(degrees);
 
   sprites.drawRotated(64,32,slack,0,degrees);
@@ -63,8 +64,8 @@ void loop() {
   fps = iterations / seconds;
 
   arduboy.setCursor(0,0);
-  arduboy.print("FPS: ");
-  arduboy.println(fps);
+  // arduboy.print("F\n");
+  arduboy.print(fps);
   // arduboy.println(degrees);
 
   // arduboy.print("cos");
