@@ -45,14 +45,14 @@ int degrees = 0;
 void loop() {
   arduboy.clear();
 
-  degrees+=3;
+  degrees+=1;
   if (degrees>=360) {
     degrees = 0;
   }
   // arduboy.drawPixel(1,1,1);
   RotationVector v(degrees);
 
-  sprites.drawRotated(64,32,slack,0,degrees);
+  sprites.drawRotated(64,32,slack,0,degrees,50);
   // delay(10);
 
   // pause render until it's time for the next frame

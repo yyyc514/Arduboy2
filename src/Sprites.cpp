@@ -8,15 +8,13 @@
 
 /* ROTATION */
 
-RotationVector::RotationVector(int d) :
-degreez(d) {
-
-  this->degreez = normalize(d);
+RotationVector::RotationVector(int16_t d) {
+  this->degrees = normalize(d);
   this->cosFractional = this->cos(d);
   this->sinFractional = this->sin(d);
 }
 
-// (0..89).to_a.map { |x| (Math.sin(x.degrees)*128).round }
+// (0..89).to_a.map { |x| (Math.sin(x.degrees)*127).round }
 int8_t const PROGMEM sinTable[] = {0, 2, 4, 7, 9, 11, 13, 15, 18, 20, 22,
 24, 26, 29, 31, 33, 35, 37, 39, 41, 43, 46, 48, 50, 52, 54, 56, 58, 60, 62,
 63, 65, 67, 69, 71, 73, 75, 76, 78, 80, 82, 83, 85, 87, 88, 90, 91, 93, 94,
@@ -25,11 +23,12 @@ int8_t const PROGMEM sinTable[] = {0, 2, 4, 7, 9, 11, 13, 15, 18, 20, 22,
 125, 125, 125, 126, 126, 126, 127, 127, 127, 127, 127, 127 };
 
 int16_t RotationVector::normalize(int16_t degrees) {
-  if (degrees < 0) {
-    return (degrees%360)+360;
-  } else {
-    return degrees;
-  }
+  if (degrees >= 0) {
+    return degrees; }
+
+  return normalize(degrees+360);
+  // 4 bytes smaller to call recursively (shouldn't really go deeper than
+  // 2 calls in practice so I think it's worth it)
 }
 
 int8_t RotationVector::cos(int16_t degrees) {
@@ -48,12 +47,12 @@ int8_t RotationVector::sin(int16_t degrees) {
     // rotate 90-179 backwards onto 89-0, ie 100 becomes 80, tec.
     degrees = 90 - (degrees - 90);
   // } else if (degrees >= 85) {
-    // return 0;
+    // degrees = 85; // 85-89 is all 127
   }
   return pgm_read_byte(sinTable + degrees) * sign;
 }
 
-Coord RotationVector::transform(int x, int y)
+Coord RotationVector::transform(int16_t x, int16_t y)
 {
   Coord result;
 
@@ -92,7 +91,7 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
 }
 
 void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-  uint16_t degrees, uint8_t scale = 100)
+  uint16_t degrees, uint8_t scale)
 {
   int16_t xOffset;
   int8_t yOffset;
@@ -113,8 +112,8 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   negativeCos = v.cosFractional < 0;
   negativeSin = v.sinFractional < 0;
   uint8_t ucf, usf;
-  ucf = abs(v.cosFractional)*2 * (scale/100);
-  usf = abs(v.sinFractional)*2 * (scale/100);
+  ucf = abs(v.cosFractional)*2 * scale/100;
+  usf = abs(v.sinFractional)*2 * scale/100;
 
   // setup offsets so we remain "centered" instead of rotating around
   // our initial 0,0
@@ -122,8 +121,8 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   yCenter = height / 2;
 
   xy = v.transform(xCenter, yCenter);
-  xOffset = xCenter - xy.x * (scale/100);
-  yOffset = yCenter - xy.y * (scale/100);
+  xOffset = xCenter - xy.x * scale/100;
+  yOffset = yCenter - xy.y * scale/100;
 
   // convert for fixed 8-bit floating point math
   cursorX = xOffset * 256;

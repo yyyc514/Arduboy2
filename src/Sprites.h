@@ -29,7 +29,7 @@ struct Coord
 class RotationVector
 {
 public:
-    RotationVector(int d);
+    RotationVector(int16_t d);
 
     /** \brief
      * Perform a raw rotational tranform of the given coordinates.
@@ -44,7 +44,7 @@ public:
      * corner would be at -63, -63.  If you want to rotate around the
      * center of your image you'll need to calcuate the offsets yourself.
     */
-    Coord transform(int x, int y);
+    Coord transform(int16_t x, int16_t y);
 
     /** \brief
      * Calculates a 8-bit signed cosine fractional value.
@@ -101,7 +101,7 @@ public:
 
     int8_t cosFractional;
     int8_t sinFractional;
-    int16_t degreez; // evidentially degrees is a macro
+    int16_t degrees;
 
 
 private:
@@ -320,7 +320,7 @@ class Sprites
      * left of the rendering so that to rotate an image in place you call
      * this function with the same (x, y) and vary only the degrees.
      *
-     * The draw mode used is currently only SPRITE_UNMASKED.
+     * The only draw mode currently supported is SPRITE_UNMASKED.
      *
      * Notes:
      * 1. For smaller sprites the difference between individual degrees may
@@ -333,7 +333,7 @@ class Sprites
      * can rotate a 32x32 image at 90-100fps.
     */
     void drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-      uint16_t degrees, uint8_t scale);
+      uint16_t degrees, uint8_t scale = 100);
 
 
     // Master function. Needs to be abstracted into separate function for
