@@ -39,11 +39,12 @@ public:
     int8_t cos(int16_t degrees);
     int8_t sin(int16_t degrees);
 
+    int8_t cosFractional;
+    int8_t sinFractional;
+
 private:
 
     int16_t normalize(int16_t degrees);
-    int8_t cosFractional;
-    int8_t sinFractional;
 };
 
 /** \brief

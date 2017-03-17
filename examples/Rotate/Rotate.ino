@@ -65,13 +65,13 @@ void loop() {
   arduboy.setCursor(0,0);
   arduboy.print("FPS: ");
   arduboy.println(fps);
-  arduboy.println(degrees);
+  // arduboy.println(degrees);
 
-  arduboy.print("cos");
-  arduboy.println(v.cos(degrees));
+  // arduboy.print("cos");
+  // arduboy.println(v.cos(degrees));
 
-  arduboy.print("sin");
-  arduboy.println(v.sin(degrees));
+  // arduboy.print("sin");
+  // arduboy.println(v.sin(degrees));
 
   // then we finaly we tell the arduboy to display what we just wrote to the display.
   arduboy.display();
