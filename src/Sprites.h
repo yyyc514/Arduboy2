@@ -320,7 +320,7 @@ class Sprites
      * left of the rendering so that to rotate an image in place you call
      * this function with the same (x, y) and vary only the degrees.
      *
-     * The only draw mode currently supported is SPRITE_OVERWRITE.
+     * Currently supported are SPRITE_OVERWRITE and SPRITE_IS_MASK.
      *
      * Notes:
      * 1. For smaller sprites the difference between individual degrees may
@@ -333,7 +333,7 @@ class Sprites
      * can rotate a 32x32 image at 90-100fps.
     */
     void drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-      uint16_t degrees, uint8_t scale = 100);
+      uint16_t degrees, uint8_t scale = 100, uint8_t drawMode = SPRITE_OVERWRITE);
 
 
     // Master function. Needs to be abstracted into separate function for

@@ -9,9 +9,9 @@
 /* ROTATION */
 
 RotationVector::RotationVector(int16_t d) {
-  this->degrees = normalize(d);
-  this->cosFractional = this->cos(d);
-  this->sinFractional = this->sin(d);
+  degrees = normalize(d);
+  cosFractional = cos(degrees);
+  sinFractional = sin(degrees);
 }
 
 // (0..89).to_a.map { |x| (Math.sin(x.degrees)*127).round }
@@ -56,8 +56,8 @@ Coord RotationVector::transform(int16_t x, int16_t y)
 {
   Coord result;
 
-  result.x = (x * this->cosFractional + y * this->sinFractional) >> 7;
-  result.y = (y * this->cosFractional + x * -this->sinFractional) >> 7;
+  result.x = (x * cosFractional + y * sinFractional) >> 7;
+  result.y = (y * cosFractional + x * -sinFractional) >> 7;
 
   return result;
 }
@@ -90,8 +90,10 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
   draw(x, y, bitmap, frame, NULL, 0, SPRITE_PLUS_MASK);
 }
 
+// Reference:
+// http://www.drdobbs.com/architecture-and-design/fast-bitmap-rotation-and-scaling/184416337
 void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-  uint16_t degrees, uint8_t scale)
+  uint16_t degrees, uint8_t scale, uint8_t drawMode)
 {
   int16_t xOffset;
   int8_t yOffset;
@@ -108,12 +110,9 @@ void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, 
   uint8_t height = pgm_read_byte(bitmap++);
 
   // setup rotational transforms
-  boolean negativeCos, negativeSin;
-  negativeCos = v.cosFractional < 0;
-  negativeSin = v.sinFractional < 0;
-  uint8_t ucf, usf;
-  ucf = abs(v.cosFractional)*2 * scale/100;
-  usf = abs(v.sinFractional)*2 * scale/100;
+  uint16_t ucf, usf;
+  ucf = v.cosFractional*2 * scale/100;
+  usf = v.sinFractional*2 * scale/100;
 
   // setup offsets so we remain "centered" instead of rotating around
   // our initial 0,0
@@ -143,6 +142,12 @@ void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, 
       color = pixels & 0x01;
       pixels >>= 1;
 
+      // if we are acting as our own mask and this pixel is black we can
+      // just skip to the next pixel
+      if (color==BLACK && drawMode == SPRITE_IS_MASK) {
+        goto next;
+      }
+
       // return the high byte for the integer portion
       ix = *((unsigned char *) (&plotX) + 1);
       iy = *((unsigned char *) (&plotY) + 1);
@@ -160,13 +165,14 @@ void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, 
           Arduboy2Base::sBuffer[bufferOffset] &= ~ _BV(iy % 8);
         }
       }
+      next:
       // END - inline drawpixel
-      plotX += (negativeSin ? -usf : +usf);
-      plotY += (negativeCos ? -ucf : +ucf);
+      plotX += usf;
+      plotY += ucf;
     }
     // update cursor X and Y
-    cursorX += (negativeCos ? -ucf : +ucf);
-    cursorY += (negativeSin ? +usf : -usf); // sign purposely reversed
+    cursorX += +ucf;
+    cursorY += -usf; // sign purposely reversed
   }
 }
 
