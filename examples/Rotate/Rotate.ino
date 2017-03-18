@@ -52,7 +52,7 @@ void loop() {
   // arduboy.drawPixel(1,1,1);
   RotationVector v(degrees);
 
-  sprites.drawRotated(64,32,slack,0,degrees,50);
+  sprites.drawRotatedOverwrite(64,32,slack,0,degrees,50);
   // delay(10);
 
   // pause render until it's time for the next frame

@@ -91,7 +91,7 @@ public:
     static int8_t sin(int16_t degrees);
 
     /** \brief
-     * Converts negative degree amonts to the equivalent positive rotation.
+     * Converts negative degree amounts to the equivalent positive rotation.
      * ie, -30 becomes 330.
      *
      * \param degrees The amount you are wanting to normalize.
@@ -320,7 +320,7 @@ class Sprites
      * left of the rendering so that to rotate an image in place you call
      * this function with the same (x, y) and vary only the degrees.
      *
-     * The only draw mode currently supported is SPRITE_UNMASKED.
+     * The only draw mode currently supported is SPRITE_OVERWRITE.
      *
      * Notes:
      * 1. For smaller sprites the difference between individual degrees may
@@ -332,7 +332,7 @@ class Sprites
      * Performance: This can rotate a full-screen image at around 20fps and
      * can rotate a 32x32 image at 90-100fps.
     */
-    void drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+    void drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
       uint16_t degrees, uint8_t scale = 100);
 
 

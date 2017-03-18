@@ -90,7 +90,7 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
   draw(x, y, bitmap, frame, NULL, 0, SPRITE_PLUS_MASK);
 }
 
-void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
   uint16_t degrees, uint8_t scale)
 {
   int16_t xOffset;
@@ -125,8 +125,8 @@ void Sprites::drawRotated(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t f
   yOffset = yCenter - xy.y * scale/100;
 
   // convert for fixed 8-bit floating point math
-  cursorX = xOffset * 256;
-  cursorY = yOffset * 256;
+  cursorX = xOffset << 8;
+  cursorY = yOffset << 8;
 
   uint8_t pixels, color, ix, iy;
   uint16_t xofs;
