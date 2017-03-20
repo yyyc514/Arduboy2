@@ -23,12 +23,28 @@ struct Coord
     int8_t y;
 };
 
+// used internally by render code
+struct RenderContext
+{
+public:
+    void prepare();
+
+    int16_t x;
+    int16_t y;
+    uint8_t *bitmap;
+    uint8_t frame;
+    uint8_t drawMode;
+    uint8_t width;
+    uint8_t height;
+};
+
 /** \brief
  * A class to help support rotational transforms (by degrees).
 */
 class RotationVector
 {
 public:
+    RotationVector();
     RotationVector(int16_t d);
 
     /** \brief
@@ -106,6 +122,20 @@ public:
 
 private:
 
+};
+
+// used internally by rotation code
+struct RotationContext : RenderContext {
+public:
+    RotationContext(int16_t x, int16_t y, uint8_t* bitmap, uint8_t frame,
+        uint8_t drawMode);
+
+    void prepareRotate(uint16_t degrees, uint8_t scale);
+
+    int16_t cursorX, cursorY;
+    int16_t degrees;
+    uint8_t scale;
+    uint16_t cosf, sinf;
 };
 
 /** \brief
@@ -307,7 +337,7 @@ class Sprites
 
     /** \brief
      * Draw the given sprite rotated by a given number of degrees and
-     * scaled as desired.
+     * scaled as desired (using SPRITE_OVERWRITE).
      *
      * \param x,y The coordinates of the top left pixel location.
      * \param bitmap A pointer to the array containing the image frames.
@@ -320,8 +350,6 @@ class Sprites
      * left of the rendering so that to rotate an image in place you call
      * this function with the same (x, y) and vary only the degrees.
      *
-     * Currently supported are SPRITE_OVERWRITE and SPRITE_IS_MASK.
-     *
      * Notes:
      * 1. For smaller sprites the difference between individual degrees may
      *    not be visibly noticeable.
@@ -333,7 +361,25 @@ class Sprites
      * can rotate a 32x32 image at 90-100fps.
     */
     void drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
-      uint16_t degrees, uint8_t scale = 100, uint8_t drawMode = SPRITE_OVERWRITE);
+      uint16_t degrees, uint8_t scale = 100);
+
+    /** \brief
+     * Draw the given sprite rotated by a given number of degrees and
+     * scaled as desired (using SPRITE_IS_MASK).
+     *
+     * \details
+     * Performance: Should be similar to OVERWRITE except the more
+       transparency in your image the faster it will render since the
+       black pixels can be skipped entirely.
+    */
+    void drawRotatedSelfMasked(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+      uint16_t degrees, uint8_t scale = 100);
+
+
+    // Master rotate function or overwrite and self masked modes
+    // (Not officially part of the API)
+    void drawRotatedGeneral(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+      uint16_t degrees, uint8_t scale, uint8_t drawMode);
 
 
     // Master function. Needs to be abstracted into separate function for

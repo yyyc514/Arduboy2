@@ -6,13 +6,80 @@
 
 #include "Sprites.h"
 
+void RenderContext::prepare()
+{
+  uint16_t frame_offset;
+
+  width = pgm_read_byte(bitmap++);
+  height = pgm_read_byte(bitmap++);
+
+  if (frame > 0) {
+    frame_offset = (width * ( height / 8 + ( height % 8 == 0 ? 0 : 1)));
+    // sprite plus mask uses twice as much space for each frame
+    if (drawMode == SPRITE_PLUS_MASK) {
+      frame_offset *= 2;
+    // } else if (mask != NULL) {
+      // mask += sprite_frame * frame_offset;
+    }
+    bitmap += frame * frame_offset;
+  }
+
+  // if we're detecting the draw mode then base it on whether a mask
+  // was passed as a separate object
+  // if (drawMode == SPRITE_AUTO_MODE) {
+    // drawMode = mask == NULL ? SPRITE_UNMASKED : SPRITE_MASKED;
+  // }
+}
+
 /* ROTATION */
+
+RotationVector::RotationVector() {
+  degrees = 0;
+}
 
 RotationVector::RotationVector(int16_t d) {
   degrees = normalize(d);
   cosFractional = cos(degrees);
   sinFractional = sin(degrees);
 }
+
+RotationContext::RotationContext(int16_t x, int16_t y, uint8_t* bitmap, uint8_t frame,
+  uint8_t drawMode)
+{
+  this->x = x;
+  this->y = y;
+  this->bitmap = bitmap;
+  this->frame = frame;
+  this->drawMode = drawMode;
+}
+
+void RotationContext::prepareRotate(uint16_t degrees, uint8_t scale) {
+  uint16_t xCenter, yCenter;
+  Coord xy;
+
+  prepare();
+  this->degrees = degrees;
+  this->scale = scale;
+
+  // setup rotational transforms
+  RotationVector vector(degrees);
+  cosf = vector.cosFractional*2 * scale/100;
+  sinf = vector.sinFractional*2 * scale/100;
+
+  // center the rotation
+  xCenter = width / 2;
+  yCenter = height / 2;
+  xy = vector.transform(xCenter, yCenter);
+
+  // setup our starting cursor
+  cursorX = x + xCenter - xy.x * scale/100;
+  cursorY = y + yCenter - xy.y * scale/100;
+
+  // convert for fixed 8-bit floating point math
+  cursorX <<= 8;
+  cursorY <<= 8;
+}
+
 
 // (0..89).to_a.map { |x| (Math.sin(x.degrees)*127).round }
 int8_t const PROGMEM sinTable[] = {0, 2, 4, 7, 9, 11, 13, 15, 18, 20, 22,
@@ -90,61 +157,57 @@ void Sprites::drawPlusMask(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t 
   draw(x, y, bitmap, frame, NULL, 0, SPRITE_PLUS_MASK);
 }
 
+// rotation draw methods
+
+void Sprites::drawRotatedSelfMasked(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+  uint16_t degrees, uint8_t scale)
+{
+  drawRotatedGeneral(x, y, bitmap, frame, degrees, scale, SPRITE_IS_MASK);
+}
+
+void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+  uint16_t degrees, uint8_t scale)
+{
+  drawRotatedGeneral(x, y, bitmap, frame, degrees, scale, SPRITE_OVERWRITE);
+}
+
 // Reference:
 // http://www.drdobbs.com/architecture-and-design/fast-bitmap-rotation-and-scaling/184416337
-void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
+void Sprites::drawRotatedGeneral(int16_t x, int16_t y, const uint8_t *bitmap, uint8_t frame,
   uint16_t degrees, uint8_t scale, uint8_t drawMode)
 {
-  int16_t xOffset;
-  int8_t yOffset;
-  RotationVector v(degrees);
-  Coord xy;
-  uint8_t xCenter, yCenter;
   int16_t plotX, plotY;
-  int16_t cursorX, cursorY;
 
   if (bitmap == NULL)
     return;
 
-  uint8_t width = pgm_read_byte(bitmap++);
-  uint8_t height = pgm_read_byte(bitmap++);
-
-  // setup rotational transforms
-  uint16_t ucf, usf;
-  ucf = v.cosFractional*2 * scale/100;
-  usf = v.sinFractional*2 * scale/100;
-
-  // setup offsets so we remain "centered" instead of rotating around
-  // our initial 0,0
-  xCenter = width / 2;
-  yCenter = height / 2;
-
-  xy = v.transform(xCenter, yCenter);
-  xOffset = xCenter - xy.x * scale/100;
-  yOffset = yCenter - xy.y * scale/100;
-
-  // convert for fixed 8-bit floating point math
-  cursorX = xOffset << 8;
-  cursorY = yOffset << 8;
+  RotationContext rc = {
+    .x = x, .y = y,
+    .bitmap = bitmap,
+    .frame = frame,
+    .drawMode = drawMode
+  };
+  // RotationContext &rc = *reinterpret_cast<RotationContext *> (&_rc);
+  rc.prepareRotate(degrees, scale);
 
   uint8_t pixels, color, ix, iy;
   uint16_t xofs;
-  for (uint8_t x=0; x< width; x++) {
-    xofs = bitmap + x;
-    plotX = cursorX;
-    plotY = cursorY;
-    // every 8 pixels we need to load more pixel data from the bitmap
-    for (uint8_t y=0; y < height; y++ ) {
+  for (uint8_t x=0; x< rc.width; x++) {
+    xofs = rc.bitmap + x;
+    plotX = rc.cursorX;
+    plotY = rc.cursorY;
+    for (uint8_t y=0; y < rc.height; y++ ) {
+      // every 8 pixels we need to load more pixel data from the bitmap
       if (y%8==0) {
         pixels = pgm_read_byte(xofs);
-        xofs += width;
+        xofs += rc.width;
       }
       color = pixels & 0x01;
       pixels >>= 1;
 
       // if we are acting as our own mask and this pixel is black we can
       // just skip to the next pixel
-      if (color==BLACK && drawMode == SPRITE_IS_MASK) {
+      if (color==BLACK && rc.drawMode == SPRITE_IS_MASK) {
         goto next;
       }
 
@@ -156,9 +219,9 @@ void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, 
       // BEGIN - inline drawpixel
       uint16_t bufferOffset;
       // if (!(ix < 0 || ix > (WIDTH-1) || iy < 0 || iy > (HEIGHT-1))) {
-      if (!(ix > (WIDTH-1) || iy > (HEIGHT-1))) {
+      if (ix < WIDTH && iy < HEIGHT) {
         uint8_t row = iy / 8;
-        bufferOffset = ((uint16_t)row*WIDTH) + ix;
+        bufferOffset = (row*WIDTH) + ix;
         if (color) {
           Arduboy2Base::sBuffer[bufferOffset] |=   _BV(iy % 8);
         } else {
@@ -167,12 +230,12 @@ void Sprites::drawRotatedOverwrite(int16_t x, int16_t y, const uint8_t *bitmap, 
       }
       next:
       // END - inline drawpixel
-      plotX += usf;
-      plotY += ucf;
+      plotX += rc.sinf;
+      plotY += rc.cosf;
     }
     // update cursor X and Y
-    cursorX += +ucf;
-    cursorY += -usf; // sign purposely reversed
+    rc.cursorX += rc.cosf;
+    rc.cursorY += -rc.sinf; // sign purposely reversed
   }
 }
 
