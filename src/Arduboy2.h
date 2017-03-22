@@ -994,6 +994,9 @@ class Arduboy2Base : public Arduboy2Core
    */
   static uint8_t sBuffer[(HEIGHT*WIDTH)/8];
 
+  unsigned long nextFrameStart;
+
+
  protected:
   // helper function for sound enable/disable system control
   void sysCtrlSound(uint8_t buttons, uint8_t led, uint8_t eeVal);
@@ -1005,7 +1008,6 @@ class Arduboy2Base : public Arduboy2Core
   // For frame funcions
   uint8_t eachFrameMillis;
   unsigned long lastFrameStart;
-  unsigned long nextFrameStart;
   bool post_render;
   uint8_t lastFrameDurationMs;
 };
@@ -1074,7 +1076,7 @@ class Arduboy2 : public Print, public Arduboy2Base
    *
    * \details
    * This function is called by the `bootLogo()` function.
-   * 
+   *
    * If a unit name has been saved in system EEPROM, it will be displayed at
    * the bottom of the screen. This function pauses for a short time to allow
    * the name to be seen.
