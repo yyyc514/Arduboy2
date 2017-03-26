@@ -16,6 +16,14 @@ version 2.1 of the License, or (at your option) any later version.
 // make an instance of arduboy used for many functions
 Arduboy2 arduboy;
 
+// 140 FPS (actual, I think)
+// XXXX----XXXX----XXXX----
+//  |   |   |   |   |   |
+// 280 FPS
+//   |   |   |   |   |   |
+// XX--XX--XX--XX--XX--XX--
+//  |   |   |   |   |   |
+
 
 void setTimers(uint16_t loops, bool pause)
 {
@@ -32,12 +40,13 @@ void setTimers(uint16_t loops, bool pause)
   TC4H = high;  // top two bits are going to be set
   OCR4C = low; // set top of count range
   TCCR4B |= 0x08 ; // CK/128 prescaler
+  // TCCR4B |= 0x09 ; // CK/256 prescaler
 
   // TIMSK4 |= (1 << OCIE4D);
   TIMSK4 |= (1 << TOIE4); // overflow
 }
 
-uint16_t top = 894;
+uint16_t top = 650;
 
 // This function runs once in your game.
 // use it for anything that needs to be set only once in your game.
@@ -51,6 +60,11 @@ void setup() {
 
   arduboy.LCDCommandMode();
 
+  // clock
+  // 0xD5, 0xF0,
+  SPI.transfer(0xD5);
+  SPI.transfer(0xF0);
+
   // contrast
   SPI.transfer(0x81);
   SPI.transfer(0xFF);
@@ -61,7 +75,7 @@ void setup() {
 
   // 0xD9, 0xF1,
 
-  setTimers(top, true);
+  // setTimers(top, true);
 }
 
 // 126 FPS
@@ -72,6 +86,7 @@ void setup() {
 // CK/32 counts to 2048us (every 2us)
 // CK/64 counts to 4096us (every 4us)
 // CK/128 counts to 8192us (every 8us)
+// CK/256 counts to 16192us (every 16us)
 
 // ISR(TIMER4_COMPD_vect) {
 
@@ -126,15 +141,72 @@ void greyscale() {
 bool top_changed = false;
 uint8_t held = 0;
 
+uint8_t l = 30;
+int8_t i = +1;
+
+int8_t refresh=0x0F;
+
+void simple() {
+  arduboy.setFrameRate(120);
+  if(!arduboy.nextFrame()) {
+    return;
+  }
+  arduboy.pollButtons();
+  arduboy.clear();
+
+  for(uint8_t u=0; u<8; u++) {
+    arduboy.sBuffer[u*128+l] = 0xFF;
+  }
+
+  // first we clear our screen to black
+  if (arduboy.justReleased(UP_BUTTON)) {
+    refresh+=1;
+    top_changed = true;
+  } else if (arduboy.justReleased(DOWN_BUTTON)) {
+    refresh-=1;
+    top_changed = true;
+  }
+
+  if (refresh>15)
+    refresh = 15;
+
+  if (refresh<0)
+    refresh = 0;
+
+  if (top_changed) {
+    arduboy.LCDCommandMode();
+    SPI.transfer(0xD5);
+    SPI.transfer(refresh << 4);
+    arduboy.LCDDataMode();
+    top_changed=false;
+  }
+  arduboy.print(refresh);
+
+
+  l+=i;
+  if (l>=70) {
+    i=-1;
+  } else if (l<30) {
+    i=+1;
+  }
+
+  arduboy.display();
+}
+
 // our main game loop, this runs once every cycle/frame.
 // this is where our game logic goes.
 void loop() {
+  simple();
+  return;
+
+
+
   if (render_done)
     return;
 
   arduboy.pollButtons();
 
-  if (held > 10) {
+  if (held > 15) {
     if (arduboy.pressed(UP_BUTTON) ) {
       top+=1;
       top_changed = true;
