@@ -132,8 +132,8 @@ ISR(TIMER3_OVF_vect) {
   uint8_t high = top >> 8;
   uint8_t low = top & 0xFF;
 
-  uint8_t high2 = top2 >> 8;
-  uint8_t low2 = top2 & 0xFF;
+  // uint8_t high2 = top2 >> 8;
+  // uint8_t low2 = top2 & 0xFF;
 
   // TIMSK4 &= ~(1 << TOIE4); // overflow
   // TCCR4B = 0;
@@ -174,8 +174,8 @@ void white() {
   arduboy.setTextBackground(BLACK);
   arduboy.setCursor(64, 0);
   arduboy.print(top);
-  arduboy.print(", ");
-  arduboy.println(top2);
+  // arduboy.print(", ");
+  // arduboy.println(top2);
   // arduboy.println(millis());
 }
 
@@ -197,7 +197,7 @@ void greyscale() {
   }
   toggle = !toggle;
   arduboy.setCursor(0, 0);
-  arduboy.println("Some greys");
+  arduboy.println("GRAY");
   // arduboy.println("more greys");
   // arduboy.println("Some greys");
   // arduboy.println("Some greys");
@@ -278,7 +278,7 @@ void loop() {
 
   arduboy.pollButtons();
 
-  if (held > 15) {
+  if (held > 20) {
     if (arduboy.pressed(UP_BUTTON) ) {
       top+=1;
       top_changed = true;

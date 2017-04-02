@@ -276,6 +276,7 @@ void Arduboy2Core::paintScreen(uint8_t image[], bool clear)
     else
       c = image[i++];
 
+    asm volatile("nop \n");
     while (!(SPSR & _BV(SPIF))) { } // wait for the previous byte to be sent
 
     // put the next byte in the SPI data register. The SPI controller will
