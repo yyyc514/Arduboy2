@@ -24,7 +24,7 @@ Arduboy2 arduboy;
 // XX--XX--XX--XX--XX--XX--
 //  |   |   |   |   |   |
 
-
+uint16_t voltage;
 
 void setTimers(uint16_t loops, bool pause)
 {
@@ -102,6 +102,7 @@ void setup() {
   // 0xD9, 0xF1,
 
   setTimers(top, true);
+  power_adc_enable();
 }
 
 
@@ -174,6 +175,8 @@ void white() {
   arduboy.setTextBackground(BLACK);
   arduboy.setCursor(64, 0);
   arduboy.print(top);
+  arduboy.setCursor(64, 8);
+  arduboy.print(voltage);
   // arduboy.print(", ");
   // arduboy.println(top2);
   // arduboy.println(millis());
@@ -265,6 +268,8 @@ void simple() {
   arduboy.display();
 }
 
+
+
 // our main game loop, this runs once every cycle/frame.
 // this is where our game logic goes.
 void loop() {
@@ -275,6 +280,11 @@ void loop() {
 
   if (render_done)
     return;
+
+  if (arduboy.frameCount % 256 == 0) {
+    voltage = arduboy.rawADC(ADC_VOLTAGE);
+  }
+  arduboy.frameCount++;
 
   arduboy.pollButtons();
 
