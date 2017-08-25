@@ -361,7 +361,7 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
         // declaring an extra high register clobber here for some reason
         // prevents a compile error for some sketches:
         // can't find a register in class 'LD_REGS' while reloading 'asm'
-        : "r0", "r1"
+        : "r0", "r1", "r28", "r29"
       );
       break;
   }
