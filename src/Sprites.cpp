@@ -249,14 +249,20 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
       uint8_t yi = loop_h; // used for y loop below
 
       asm volatile(
+        "push r26\npush r27\n"
         "push r28\n" // save Y
         "push r29\n"
-        "movw r28, %[buffer_page2_ofs]\n" // Y = buffer page 2 offset
+        "push r30\npush r31\n"
+        "movw r28, %[buffer_ofs]\n" // Y = buffer page 2 offset
+        // buffer_ofs_2 = buffer_ofs + 128
+        "adiw r28, 63\n"
+        "adiw r28, 63\n"
+        "adiw r28, 2\n"
         "loop_y:\n"
         "loop_x:\n"
         // load bitmap and mask data
-        "lpm %A[bitmap_data], Z+\n"
-        "lpm %A[mask_data], Z+\n"
+        "lpm %A[bitmap_data], %a[sprite_ofs]+\n"
+        "lpm %A[mask_data], %a[sprite_ofs]+\n"
 
         // shift mask and buffer data
         "tst %[yOffset]\n"
@@ -310,25 +316,29 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
         "next_loop_y:\n"
         "dec %[yi]\n"
         "breq finished\n"
+        // "jmp finished\n"
         "mov %[xi], %[x_count]\n" // reset x counter
         // sRow++;
         "inc %[sRow]\n"
         "clr __zero_reg__\n"
-        // sprite_ofs += (w - rendered_width) * 2;
-        "add %A[sprite_ofs], %A[sprite_ofs_jump]\n"
-        "adc %B[sprite_ofs], __zero_reg__\n"
         // buffer_ofs += WIDTH - rendered_width;
         "add %A[buffer_ofs], %A[buffer_ofs_jump]\n"
         "adc %B[buffer_ofs], __zero_reg__\n"
         // buffer_ofs_page_2 += WIDTH - rendered_width;
         "add r28, %A[buffer_ofs_jump]\n"
         "adc r29, __zero_reg__\n"
+        // sprite_ofs += (w - rendered_width) * 2;
+        // "clr %A[sprite_ofs_jump]\n"
+        "add %A[sprite_ofs], %A[sprite_ofs_jump]\n"
+        "adc %B[sprite_ofs], __zero_reg__\n"
 
         "rjmp loop_y\n"
         "finished:\n"
+        "pop r31\npop r30\n"
         // put the Y register back in place
         "pop r29\n"
         "pop r28\n"
+        "pop r27\npop r26\n"
         "clr __zero_reg__\n" // just in case
         : [xi] "+&r" (xi),
         [yi] "+&r" (yi),
@@ -338,18 +348,20 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
         [bitmap_data] "=&r" (bitmap_data)
         :
         [x_count] "r" (rendered_width),
-        [y_count] "r" (loop_h),
+        // [y_count] "r" (loop_h),
         [sprite_ofs] "z" (bofs),
         [buffer_ofs] "x" (Arduboy2Base::sBuffer+ofs),
-        [buffer_page2_ofs] "r" (Arduboy2Base::sBuffer+ofs+WIDTH), // Y pointer
+        // [buffer_page2_ofs] "r" (Arduboy2Base::sBuffer+ofs+WIDTH), // Y pointer
         [buffer_ofs_jump] "r" (WIDTH-rendered_width),
         [sprite_ofs_jump] "r" ((w-rendered_width)*2),
+
+        // [sprite_ofs_jump] "r" (0),
         [yOffset] "r" (yOffset),
         [mul_amt] "r" (mul_amt)
         // declaring an extra high register clobber here for some reason
         // prevents a compile error for some sketches:
         // can't find a register in class 'LD_REGS' while reloading 'asm'
-        : "r24"
+        : "r0", "r1"
       );
       break;
   }
