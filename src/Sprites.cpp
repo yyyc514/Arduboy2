@@ -246,7 +246,7 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
       bofs = (uint8_t *)(bitmap + ((start_h * w) + xOffset) * 2);
 
       uint8_t xi = rendered_width; // used for x loop below
-      uint8_t yi = loop_h; // used for y loop below
+      // uint8_t yi = loop_h; // used for y loop below
 
       asm volatile(
         "push r26\npush r27\n"
@@ -261,8 +261,8 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
         "loop_y:\n"
         "loop_x:\n"
         // load bitmap and mask data
-        "lpm %A[bitmap_data], %a[sprite_ofs]+\n"
-        "lpm %A[mask_data], %a[sprite_ofs]+\n"
+        "lpm %A[bitmap_data], Z+\n"
+        "lpm %A[mask_data], Z+\n"
 
         // shift mask and buffer data
         "tst %[yOffset]\n"
@@ -341,7 +341,7 @@ void Sprites::drawBitmap(int16_t x, int16_t y,
         "pop r27\npop r26\n"
         "clr __zero_reg__\n" // just in case
         : [xi] "+&r" (xi),
-        [yi] "+&r" (yi),
+        [yi] "+&r" (loop_h),
         [sRow] "+&d" (sRow), // CPI requires an upper register
         [data] "=&r" (data),
         [mask_data] "=&r" (mask_data),
